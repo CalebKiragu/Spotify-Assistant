@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const prettyjson = require('prettyjson');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -10,8 +12,8 @@ const options = {
 //Request Authorization
 function getAuthToken(callBack) {
     const spotifyApi = new SpotifyWebApi({
-        clientId: 'd579cfded6df4bb5982d76125025133e',
-        clientSecret: '2c73c538026c4d1d9a82842736a0d575',
+        clientId: process.env.CLIENT_ID ,
+        clientSecret: process.env.CLIENT_SECRET,
         redirectUri: 'https://b6c72807cbf7.ngrok.io/hooks/redirectURL'
     });
     

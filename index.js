@@ -4,6 +4,9 @@ const SpotifyWebApi = require('spotify-web-api-node');
 const getToken = require('./access_token');
 const prettyjson = require('prettyjson');
 const chalk = require('chalk');
+const fs = require('fs-extra');
+
+const getAuth = require('./authorization');
 
 const prompt = require('prompt-sync')({sigint: true});
 const readline = require('readline').createInterface({
@@ -14,12 +17,54 @@ const options = {
     noColor: true
 };
 
-const spotifyApi = new SpotifyWebApi();
+const spotifyApi = new SpotifyWebApi({ 
+    redirectUri: process.env.REDIRECT_URI,
+    clientId: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET });
 
 console.log('------------Welcome to Spotify Assistant v1.0.0------------');
 
 const promise = new Promise((resolve, reject) => {    
-    getToken.getAuthToken(
+
+    fs.readFile('/home/hactivist/Projects/Spotify-Assistant/timer.txt', 'utf8' , (err, data) => {
+        if (err) {
+            console.error(err)
+            return
+        }
+
+        if(data) {
+            const elapsed = new Date() - data;
+            elapsedSec = elapsed/1000 ;
+    
+            if(elapsedSec > 3599) {
+                getAuth.refreshToken((access_token) => {
+                    spotifyApi.setAccessToken(access_token);
+                });
+            } else {
+                resolve('Access Token still valid. Proceeding to Main Menu.')
+            }
+        }
+
+    });
+
+    getAuth.getCode(
+        ({ refresh_token , access_token }) => {
+            if(access_token && refresh_token) {
+                spotifyApi.setAccessToken(access_token);
+                console.log('Access token obtained.');
+                spotifyApi.setRefreshToken(refresh_token);
+                console.log('Refresh token obtained.');
+
+                resolve('Authentication Successful.');
+            } else {
+                console.error('Failed to get tokens.');
+
+                reject('Failed to get Auth Tokens.')
+            }               
+        }
+    );
+
+    /*getToken.getAuthToken(
         (authToken) => {        
             if (authToken) { 
                 spotifyApi.setAccessToken(authToken);
@@ -28,7 +73,8 @@ const promise = new Promise((resolve, reject) => {
                 reject('Failed to get AuthToken.');
             }            
         }       
-    )
+    )*/
+
 });
 
 promise.then((message) => {
@@ -38,8 +84,9 @@ promise.then((message) => {
 	console.log(err);
 })
 
+
 function requestCommand() {
-    readline.question('-pl => get playlists\n-me => get own info\n', inputCommand => {
+    readline.question('-pl => get playlists [\'Name of playlist\' - optional parameter.]\n-me => get own info [\'Your Spotify Username\' - optional parameter.]\n-bv => bring the vibe playlist [\'Your Spotify Username\', \'Friend 1\', \'Friend 2\', \'Friend 3\', \'Friend 4\', \'Friend 5\']\n', inputCommand => {
         readline.close();
 
         const cmd = inputCommand.substring(0, 3);
@@ -59,7 +106,20 @@ function requestCommand() {
                 } else {
                     getMe();
                 }       
-                break;            
+                break;   
+            case '-bv':
+                let inputs = [];
+                const input_parameters = inputCommand.substring(4, inputCommand.length);
+                inputs = input_parameters.split(", ");
+                console.log('INPUT PARAMETERS -',input_parameters);
+                console.log('INPUTS -',inputs);
+                if(inputs.length < 2) {
+                    console.error('Please enter at least 2 parameters.')
+                } else {
+                    console.log('Bringing the vibe...');
+                    generatePlaylist(inputs);                    
+                }                
+                break;
             default:
                 console.error(cmd+' is not a recognized command.');
                 requestCommand();
@@ -121,9 +181,43 @@ function getUser(user_name) {
     // Get a user
     const get_user = spotifyApi.getUser(user_name);
     get_user.then((data) => {
-        console.log('Some information about this user: ', data.body);
+        console.log('Some information about this user:\n', data.body);
     });
     get_user.catch((err) => {
         console.log('Failed to get info.', err);
     });
+}
+
+function generatePlaylist(inputs) {
+    const user_name = inputs[0];
+    const friend1 = inputs[1];
+    let friend2, friend3, friend4, friend5;
+
+    if(inputs[2] != undefined) {
+        friend2 = inputs[2];
+    }
+    if(inputs[3] != undefined) {
+        friend3 = inputs[3];
+    }
+    if(inputs[4] != undefined) {
+        friend4 = inputs[4];
+    }
+    if(inputs[5] != undefined) {
+        friend5 = inputs[5];
+    }
+    
+    console.log('Username - ',user_name,'\nFriend 1 - ',friend1,'\nFriend 2 - ',friend2,'\nFriend 3 - ',friend3,'\nFriend 4 - ',friend4,'\nFriend 5 - ',friend5);
+
+    /* Get a User’s Top Tracks*/
+    const top_tracks = spotifyApi.getMyTopTracks();
+    top_tracks.then((data) => {
+        let result = data.body;
+        console.log('Result:\n',result,'\n');
+        let topTracks = data.body.items;
+        console.log('\nYour top tracks:\n',topTracks);
+    });
+    top_tracks.catch((err) => {
+        console.log('Something went wrong!', err);
+    });
+
 }

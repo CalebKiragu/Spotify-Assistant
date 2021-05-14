@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const prettyjson = require('prettyjson');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -8,38 +10,41 @@ const options = {
     spaces: '\t'
 };
 
-// create an express app and configure it with bodyParser middleware
-const app = express();
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+const SpotifyWebApi = require('spotify-web-api-node');
 
-// create our webhook endpoint to receive redirected data from Spotify
-app.post('/hooks/redirectURL', (req, res) => {
-    console.log('-----------Received Re-directed Data-----------');
-	
-    //format and dump the recieved data in the terminal    
-    console.log(prettyjson.render(req.body, options)); 
-    console.log('-----------------------');
+const scopes = ['user-top-read', 'user-read-private', 'user-read-email'];
+const state = 'Test003';
 
-    //RUN CHECKS TO ENSURE DATA IS VALID THEN RESPOND APPROPRIATELY
-    /*
-    let message = {
-    "ResponseCode": "0",
-    "ResponseDesc": "Success"
-    };
-	
-    // respond with a success message
-    res.json(message);
-    */
+// Setting credentials can be done in the wrapper's constructor, or using the API object's setters.
+const spotifyApi = new SpotifyWebApi({
+    redirectUri: process.env.REDIRECT_URI,
+    clientId: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET
+});
 
-    fs.writeFile('./redirect.json', req.body, {'flag':'a+'}, (err) => {
-        console.log(err);
+function getAuthCode(callBack) {
+    const app = express();
+    app.use(bodyParser.json());
+    app.use(bodyParser.urlencoded({ extended: true }));
+    
+    app.get('/hooks/redirectURL', (req, res) => {
+   
+        res.send('Redirect Successful.')
+        console.log('Redirect Successful.')
+
+        return callBack(req.query['code']);              
     });
 
-});
+    const server = app.listen(5000, () => {
+        let host = server.address().address;
+        let port = server.address().port;
+        console.log(`Authenticating...` );
+        console.log('Follow the URL below to authenticate Spotify Assistant');  
 
-const server = app.listen(5000, () => {
-    let host = server.address().address;
-    let port = server.address().port;
-    console.log(`Re-direct URL server listening on port ${port}` );
-});
+        // Create the authorization URL
+        const authorizeURL = spotifyApi.createAuthorizeURL(scopes, state);
+        console.log('\n', authorizeURL, '\n');
+    });
+}
+
+module.exports = { getAuthCode };
