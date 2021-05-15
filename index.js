@@ -32,37 +32,61 @@ const promise = new Promise((resolve, reject) => {
             return
         }
 
-        if(data) {
-            const elapsed = new Date() - data;
-            elapsedSec = elapsed/1000 ;
+        if(data) {            
+            const elapsed = new Date() - Date.parse(data);            
+            const elapsedSec = elapsed/1000 ;          
     
             if(elapsedSec > 3599) {
                 getAuth.refreshToken((access_token) => {
                     spotifyApi.setAccessToken(access_token);
+
+                    fs.writeFile('/home/hactivist/Projects/Spotify-Assistant/accessToken.txt', access_token, err => {
+                        if(err) {
+                            console.log('Failed to record access token.', err)
+                            return
+                        }
+                        resolve('Token refreshed. Proceeding to Main Menu.\n')
+                    });                   
                 });
             } else {
-                resolve('Access Token still valid. Proceeding to Main Menu.')
+                fs.readFile('/home/hactivist/Projects/Spotify-Assistant/accessToken.txt', 'utf8', (err, data) => {
+                    if(err) {
+                        console.error('Failed to read access token.', err);
+                        return
+                    }
+                    spotifyApi.setAccessToken(data);
+                    resolve('Token obtained. Proceeding to Main Menu.');
+                });
             }
         }
-
     });
 
-    getAuth.getCode(
+    /* The below function is to be used on first instance of the application. */
+
+    /*getAuth.getCode(
         ({ refresh_token , access_token }) => {
-            if(access_token && refresh_token) {
+            if(access_token) {
                 spotifyApi.setAccessToken(access_token);
-                console.log('Access token obtained.');
-                spotifyApi.setRefreshToken(refresh_token);
-                console.log('Refresh token obtained.');
-
-                resolve('Authentication Successful.');
+                console.log('Access token obtained.');                
             } else {
-                console.error('Failed to get tokens.');
+                console.error('Failed to get access token.');
+                return
+            }
+            if(refresh_token) {
+                spotifyApi.setRefreshToken(refresh_token);
+                console.log('Refresh token obtained.');                
+            } else {
+                console.error('Failed to get refresh token.');
+                return
+            }
 
-                reject('Failed to get Auth Tokens.')
-            }               
+            if( spotifyApi.getAccessToken() && spotifyApi.getRefreshToken() ) {
+                resolve('Authentication Successful.');  
+            } else {
+                reject('Authentication Failed.');
+            }                                
         }
-    );
+    );*/
 
     /*getToken.getAuthToken(
         (authToken) => {        
@@ -86,7 +110,7 @@ promise.then((message) => {
 
 
 function requestCommand() {
-    readline.question('-pl => get playlists [\'Name of playlist\' - optional parameter.]\n-me => get own info [\'Your Spotify Username\' - optional parameter.]\n-bv => bring the vibe playlist [\'Your Spotify Username\', \'Friend 1\', \'Friend 2\', \'Friend 3\', \'Friend 4\', \'Friend 5\']\n', inputCommand => {
+    readline.question('\tMAIN MENU\n-pl => get playlists [\'Name of playlist\' - optional parameter.]\n-me => get own info [\'Your Spotify Username\' - optional parameter.]\n-bv => bring the vibe playlist [\'Your Spotify Username\', \'Friend 1\', \'Friend 2\', \'Friend 3\', \'Friend 4\', \'Friend 5\']\n\n', inputCommand => {
         readline.close();
 
         const cmd = inputCommand.substring(0, 3);
@@ -169,10 +193,10 @@ function getMe() {
     // Get the authenticated user
     const get_me = spotifyApi.getMe();
     get_me.then(data => {
-        console.log('Information about authenticated user: ', data.body);        
+        console.log('Information about authenticated user:\n', data.body);        
     });
     get_me.catch(err => {
-        console.log('Failed to get info.');
+        console.log('Failed to get info.\n', err);
         //requestCommand();
     });
 }
@@ -184,7 +208,7 @@ function getUser(user_name) {
         console.log('Some information about this user:\n', data.body);
     });
     get_user.catch((err) => {
-        console.log('Failed to get info.', err);
+        console.log('Failed to get info.\n', err);
     });
 }
 

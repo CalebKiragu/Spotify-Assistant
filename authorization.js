@@ -42,8 +42,17 @@ function getCode(callBack) {
                 return
               }
 
-              console.log('\nSaved refresh token to refreshToken.txt');
-              return callBack({ access_Token , refresh_Token });              
+              console.log('\nSaved Refresh token to refreshToken.txt');
+
+              fs.writeFile('/home/hactivist/Projects/Spotify-Assistant/accessToken.txt', access_Token, err => {
+                if (err) {
+                  console.error('Error writing access token.', err);
+                  return
+                }
+
+                console.log('\nSaved Access token to accessToken.txt');
+                return callBack({ access_Token , refresh_Token });
+              });                           
             });            
           });  
       });
@@ -56,24 +65,32 @@ function getCode(callBack) {
 function refreshToken(callBack) {
   fs.readFile('/home/hactivist/Projects/Spotify-Assistant/refreshToken.txt', 'utf8' , (err, data) => {
     if (err) {
-      console.error(err)
+      console.error('Error obtaining refresh token.', err)
       return
     }
     spotifyApi.setRefreshToken(data);
-    console.log('Refresh token obtained successfully.');
+    console.log('Refresh token obtained.');
 
     //spotifyApi.setRefreshToken(' REFRESH TOKEN ');
     // clientId, clientSecret and refreshToken has been set on the api object previous to this call.
     spotifyApi.refreshAccessToken().then(
       function(data) {
         console.log('Access token refreshed successfully.');
-        // Save the access token so that it's used in future calls
-        //spotifyApi.setAccessToken(data.body['access_token']);
 
-        return callBack(data.body['access_token']);
+        const recordedTime = new Date();
+
+        fs.writeFile('/home/hactivist/Projects/Spotify-Assistant/timer.txt', recordedTime, err => {
+          if(err) {
+            console.error('Failed to update refresh time.', err);
+            return
+          }
+          console.log('Refresh time updated.');
+          return callBack(data.body['access_token']);
+        });
+
       },
       function(err) {
-        console.log('Could not refresh access token', err);
+        console.log('Failed to refresh access token', err);
       }
     );
   });

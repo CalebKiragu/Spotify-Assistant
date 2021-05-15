@@ -4,6 +4,7 @@ const prettyjson = require('prettyjson');
 const express = require('express');
 const bodyParser = require('body-parser');
 const SpotifyWebApi = require('spotify-web-api-node');
+const fs = require('fs-extra');
 
 const options = {
     noColor: true
@@ -25,6 +26,19 @@ function getAuthToken(callBack) {
     });
     token.catch(error => console.log('Authentication Failed.', error));   
 }
+
+/* TEST CODE */
+
+/*getAuthToken((accessToken) => {
+    fs.writeFile('/home/hactivist/Projects/Spotify-Assistant/accessToken.txt', accessToken, err => {
+        if(err) {
+            console.log('Failed to record access token.', err)
+            return
+        }
+        //resolve('Access Token refreshed. Proceeding to Main Menu.\n')
+        console.log('Access token saved.');
+    }); 
+})*/
 
 module.exports = { getAuthToken };
 
