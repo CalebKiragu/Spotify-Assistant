@@ -51,7 +51,9 @@ function getCode(callBack) {
                 }
 
                 console.log('\nSaved Access token to accessToken.txt');
-                return callBack({ access_Token , refresh_Token });
+                const output = { Atoken: access_Token , Rtoken: refresh_Token }
+                
+                return callBack(output);
               });                           
             });            
           });  
@@ -81,7 +83,7 @@ function refreshToken(callBack) {
 
         fs.writeFile('/home/hactivist/Projects/Spotify-Assistant/timer.txt', recordedTime, err => {
           if(err) {
-            console.error('Failed to update refresh time.', err);
+            console.error('Failed to write time.\n', err);
             return
           }
           console.log('Refresh time updated.');
@@ -90,7 +92,7 @@ function refreshToken(callBack) {
 
       },
       function(err) {
-        console.log('Failed to refresh access token', err);
+        console.log('Failed to refresh access token\n', err);
       }
     );
   });

@@ -12,8 +12,8 @@ const options = {
 
 const SpotifyWebApi = require('spotify-web-api-node');
 
-const scopes = ['user-top-read', 'user-read-private', 'user-read-email'];
-const state = 'Test003';
+const scopes = ['user-follow-read', 'user-follow-modify', 'user-top-read', 'user-read-recently-played', 'user-read-playback-position', 'user-read-currently-playing', 'playlist-modify-public', 'playlist-modify-private', 'playlist-read-private', 'playlist-read-collaborative', 'user-library-read', 'user-library-modify', 'user-read-private', 'user-read-email'];
+const state = 'Scope_Modification';
 
 // Setting credentials can be done in the wrapper's constructor, or using the API object's setters.
 const spotifyApi = new SpotifyWebApi({
@@ -44,6 +44,7 @@ function getAuthCode(callBack) {
         // Create the authorization URL
         const authorizeURL = spotifyApi.createAuthorizeURL(scopes, state);
         console.log('\n', authorizeURL, '\n');
+        
     });
 }
 
