@@ -4,7 +4,8 @@ const SpotifyWebApi = require('spotify-web-api-node');
 const getToken = require('./access_token');
 const prettyjson = require('prettyjson');
 const chalk = require('chalk');
-const fs = require('fs-extra');
+//const fs = require('fs-extra');
+const fs = require('fs');
 
 const getAuth = require('./authorization');
 const { RSA_PSS_SALTLEN_MAX_SIGN } = require('constants');
@@ -23,11 +24,11 @@ const spotifyApi = new SpotifyWebApi({
     clientId: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET });
 
-console.log('------------Welcome to Spotify Assistant v1.0.0------------');
+console.log('\n\n------------Welcome to Spotify Assistant v1.0.0------------');
 
 const promise = new Promise((resolve, reject) => {    
 
-    fs.readFile('/home/hactivist/Projects/Spotify-Assistant/timer.txt', 'utf8' , (errTimer, dataTimer) => {
+    fs.readFile('./timer.txt', 'utf8' , (errTimer, dataTimer) => {
         if (errTimer) {
             console.error(errTimer)
             reject('Internal error occured.');
@@ -42,7 +43,7 @@ const promise = new Promise((resolve, reject) => {
                 getAuth.refreshToken((access_token) => {
                     spotifyApi.setAccessToken(access_token);
 
-                    fs.writeFile('/home/hactivist/Projects/Spotify-Assistant/accessToken.txt', access_token, err => {
+                    fs.writeFile('./accessToken.txt', access_token, err => {
                         if(err) {
                             console.log('Failed to record access token.', err)
                             return
@@ -51,7 +52,7 @@ const promise = new Promise((resolve, reject) => {
                     });                   
                 });
             } else {
-                fs.readFile('/home/hactivist/Projects/Spotify-Assistant/accessToken.txt', 'utf8', (err, data) => {
+                fs.readFile('./accessToken.txt', 'utf8', (err, data) => {
                     if(err) {
                         console.error('Failed to read access token.', err);
                         return
@@ -112,7 +113,7 @@ promise.then((message) => {
 
 
 function requestCommand() {
-    readline.question('\tMAIN MENU \n-mp => my playlists \n-sp => search playlist [\'Playlist Name\', \'User ID\']\n-me => my account [\'Your Spotify Username\']\n-bv => bring the vibe playlist [\'Friend 1\', \'Friend 2\', \'Friend 3\', \'Friend 4\', \'Friend 5\']\n\n', inputCommand => {
+    readline.question('\tMAIN MENU \n-mp => my playlists [\'User ID\'] \n-sp => search playlist [\'Playlist Name\', \'User ID\']\n-me => my account [\'Your Spotify Username\']\n-bv => bring the vibe playlist [\'Friend 1\', \'Friend 2\', \'Friend 3\', \'Friend 4\', \'Friend 5\']\n\n', inputCommand => {
         readline.close();
 
         const cmd = inputCommand.substring(0, 3);
@@ -120,23 +121,34 @@ function requestCommand() {
             case '-mp':
                 if(inputCommand.length > 4) {
                     const user_id = inputCommand.substring(4, inputCommand.length);
-                    getPlaylists(user_id);
+                    getPlaylists(user_id, () => {
+                        requestCommand();
+                    });
                 } else {
-                    getPlaylists();
+                    const user_id = null;
+                    getPlaylists(user_id, () => {
+                        requestCommand();
+                    });
                 }                
                 break;
             case '-sp':
                 let inputsPL = [];
                 const input_params = inputCommand.substring(4, inputCommand.length);
                 inputsPL = input_params.split(",");
-                getPlaylist( inputsPL[0] , inputsPL[1] );                                           
+                getPlaylist( inputsPL[0] , inputsPL[1] , () => {
+                    requestCommand();
+                });                                           
                 break;
             case '-me':
                 if(inputCommand.length > 4) {
                     const user_name = inputCommand.substring(4, inputCommand.length);
-                    getUser(user_name);
+                    getUser(user_name, () => {
+                        requestCommand();
+                    });
                 } else {
-                    getMe();
+                    getMe(() => {
+                        requestCommand();
+                    });
                 }       
                 break;   
             case '-bv':
@@ -149,7 +161,9 @@ function requestCommand() {
                     console.error('Please enter at least 2 parameters.')
                 } else {
                     console.log('Bringing the vibe...');
-                    generatePlaylist(inputs);                    
+                    generatePlaylist(inputs, () => {
+                        requestCommand();
+                    });                    
                 }                
                 break;
             default:
@@ -160,28 +174,33 @@ function requestCommand() {
     });
 }
 
-function getPlaylists() {
-    // Get a user's playlists    
-    const get_playlists = spotifyApi.getUserPlaylists();
+function getPlaylists( user_id , callBack ) {
+    // Get a user's playlists
+    const get_playlists = spotifyApi.getUserPlaylists(user_id);
     get_playlists.then((data) => {
         const items = data.body.items
         console.log(`\nYour playlists:\n`);
         console.log(items);
-        //requestCommand();
+
+        return callBack();
     });
     get_playlists.catch((err) => {
         console.error('\nUnable to get playlists.\n', err);
-        //requestCommand();
+
+        return callBack();
     });
+
+    
 }
 
-function getPlaylist( list_name , user_id ) {
+function getPlaylist( list_name , user_id , callBack) {
     //const get_playlist = spotifyApi.getUserPlaylists('rnracjpa96xv3940tcul36fpj');
     const get_playlist = spotifyApi.getUserPlaylists(user_id);
     get_playlist.then((data) => {
         if(data.body == undefined) {
             console.error('\nPlaylist '+list_name+' not found.\nPlease check name and try again');
             //requestCommand();
+            return callBack();
         } else {
             const items = data.body.items
             console.log('\nRetrieved playlist \''+list_name+'\':');
@@ -189,39 +208,49 @@ function getPlaylist( list_name , user_id ) {
                 return item.name == list_name;
             }));
             //requestCommand();
+            return callBack();
         }        
     });
     get_playlist.catch((err) => {
         console.error('\nFailed to get playlist.', err);
         //requestCommand();
-    })
+        return callBack();
+    })    
 }
 
 //Gets information about authenticated user
-function getMe() {
+function getMe( callBack ) {
     // Get the authenticated user
     const get_me = spotifyApi.getMe();
     get_me.then(data => {
-        console.log('Information about authenticated user:\n', data.body);        
+        console.log('Information about authenticated user:\n', data.body);    
+        //requestCommand();    
+        return callBack();
     });
     get_me.catch(err => {
         console.log('Failed to get info.\n', err);
         //requestCommand();
-    });
+        return callBack();
+    });    
 }
 
-function getUser(user_id) {
+function getUser(user_id, callBack) {
     // Get a user
     const get_user = spotifyApi.getUser(user_id);
     get_user.then((data) => {
         console.log(`\nFound user ${user_id}:\n`, data.body);
+        //requestCommand();
+        return callBack();
     });
     get_user.catch((err) => {
         console.log('\nFailed to get info.\n', err);
+        //requestCommand();
+        return callBack();
     });
+   
 }
 
-function generatePlaylist(inputs) {
+function generatePlaylist(inputs, callBack) {
     /*
     const friend1 = inputs[0];
     let friend2, friend3, friend4, friend5;
@@ -329,13 +358,16 @@ function generatePlaylist(inputs) {
                             spotifyApi.addTracksToPlaylist( vibeID , track_list)
                             .then((data) => {
                                 console.log('Your playlist is ready.\n\nHappy listening \t:) \n');
+                                return callBack();
                             }, (err) => {
                                 console.log('Internal error occured.\n', err);
+                                return callBack();
                             });
 
                         });    
                     }, (err) => {
                         console.log('Internal error occured. Failed to create playlist.\n', err);
+                        return callBack();
                     });  
                 }
             });
@@ -343,19 +375,20 @@ function generatePlaylist(inputs) {
         get_playlists.catch((err) => {
             console.error('Internal error occured. Failed to get user playlists.\n', err);
             //requestCommand();
+            return callBack();
         });
  
     });
     get_me.catch(err => {
         console.log('Internal error occured. Failed to get user ID.\n', err);
         //requestCommand();
+        return callBack();
     }); 
 
+    
 }
 
 function sortTracks(inputs) {
-    let track_list = [];
-
-    
+    let track_list = [];    
 
 }

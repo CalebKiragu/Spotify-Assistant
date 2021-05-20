@@ -26,9 +26,9 @@ function getCode(callBack) {
           access_Token = data.body['access_token'];
           refresh_Token =  data.body['refresh_token'];
 
-          const timer = new Date();
+          const timer = new Date().toString();
 
-          fs.writeFile('/home/hactivist/Projects/Spotify-Assistant/timer.txt', timer, err => {
+          fs.writeFile('./timer.txt', timer, err => {
             if(err) {
               console.error('Error writing timestamp.', err);
               return
@@ -36,7 +36,7 @@ function getCode(callBack) {
             console.log('Time recorded.');
 
             //Writing refresh token to file
-            fs.writeFile('/home/hactivist/Projects/Spotify-Assistant/refreshToken.txt', refresh_Token, err => {
+            fs.writeFile('./refreshToken.txt', refresh_Token, err => {
               if (err) {
                 console.error('Error writing refresh token.', err);
                 return
@@ -44,7 +44,7 @@ function getCode(callBack) {
 
               console.log('\nSaved Refresh token to refreshToken.txt');
 
-              fs.writeFile('/home/hactivist/Projects/Spotify-Assistant/accessToken.txt', access_Token, err => {
+              fs.writeFile('./accessToken.txt', access_Token, err => {
                 if (err) {
                   console.error('Error writing access token.', err);
                   return
@@ -65,7 +65,7 @@ function getCode(callBack) {
 }
 
 function refreshToken(callBack) {
-  fs.readFile('/home/hactivist/Projects/Spotify-Assistant/refreshToken.txt', 'utf8' , (err, data) => {
+  fs.readFile('./refreshToken.txt', 'utf8' , (err, data) => {
     if (err) {
       console.error('Error obtaining refresh token.', err)
       return
@@ -79,9 +79,9 @@ function refreshToken(callBack) {
       function(data) {
         console.log('Access token refreshed successfully.');
 
-        const recordedTime = new Date();
+        const recordedTime = new Date().toString();
 
-        fs.writeFile('/home/hactivist/Projects/Spotify-Assistant/timer.txt', recordedTime, err => {
+        fs.writeFile('./timer.txt', recordedTime, err => {
           if(err) {
             console.error('Failed to write time.\n', err);
             return
